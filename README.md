@@ -4,7 +4,33 @@
 
 My FOMC event study asked whether regional bank stocks react to Fed announcements. This project asks a different question: which US banks look stressed on their own fundamentals, and does that show up before the headlines?
 
-The screen itself is not built yet. So far this repo holds the part everything else depends on: a SQLite database of FDIC call report data for every US bank, 2019Q1 to 2026Q2, plus an audit of what is wrong with it. The SQL screen and an Excel workbook for a non technical reader come next.
+The screen is built in SQL on a SQLite database of FDIC call report data for every US bank, 2019Q1 to 2026Q2. In 2026Q2 it flags 21 of 3,729 banks with at least $100M in assets. An Excel workbook for a non technical reader is still to come.
+
+## What I found
+
+A bank is flagged if all three hold in 2026Q2: deposits down year over year, noncurrent loans up two quarters in a row, and net interest margin in the bottom decile of its asset size peer group.
+
+- 21 banks pass. 6 are in the $1B to $10B group (of 902 banks) and 15 are under $1B (of 2,662). None are in the $10B to $100B group (133 banks) or the over $100B group (32 banks).
+- I expected one peer group to look clearly weaker. It does not. The two groups with any flags are flagged at about the same rate, 0.7% and 0.6%.
+- Some flags are probably bad data, not stress. CERT 12013 has a negative margin and an ROA of -1.45, and it is the bank with deposits above assets in the audit. CERT 6078 has an ROA of -3.96. A cleaner example is Bogota Savings Bank (NJ, $872M): deposits down 9.5% in a year and noncurrent loans at 4.3%.
+- The March 2023 check ranks banks that began 2022Q4 at $10B to $100B by deposit change to 2023Q2. Silvergate is first at -85%. Bank of America California and two Charles Schwab banks also fall 12% to 38%, which looks like transfers inside their parent groups, not runs. I have not confirmed that.
+- Median ROA in 2026Q2 is 1.23 for Michigan's 65 ranked banks against 1.25 for the 3,729 nationally.
+
+## The queries
+
+All in `sql/`, each with a one line business question at the top. Views first, then queries that export to `output/`.
+
+| File | Question |
+|---|---|
+| 01 to 04 | Views: size peer groups, QoQ and YoY changes, peer ranks, rolling 4 quarter ROA |
+| 05 | Which banks fail all three stress tests in the latest quarter |
+| 06 | Summed industry assets per quarter |
+| 07 | Biggest deposit losers in the $10B to $100B group, 2022Q4 to 2023Q2 |
+| 08 | Median Michigan bank against the median US bank |
+| 09 | Median ROA and margin by peer group and quarter |
+| 10 | Latest quarter, every ranked bank, with its peer ranks |
+
+Every lag checks that the earlier row is really the prior quarter, so a bank that skipped a quarter gets NULL, not a wrong comparison. Banks under $100M are left out of the ranks because their ratios swing too much.
 
 ## What the data looks like
 
@@ -45,8 +71,10 @@ python -m pytest
 
 - Call reports are quarterly and arrive about two months late. They say nothing about stress inside a quarter.
 - FDIC defines the ratios, and I use them as given.
-- The institutions table is current as of the pull. A bank's name or active flag is today's, not the flag it had in 2019.
+- The institutions table is current as of the pull. A bank's name or active flag is today's, not the flag it had in 2019. Rerunning `load.py` can rename a bank in the committed CSVs.
+- The screen flags 21 banks on three thresholds I chose. I did not test how the list changes if they move.
+- My 2026Q2 data has 4,313 banks. The FDIC's Quarterly Banking Profile counts 4,238 insured institutions. I have not found the cause of the 75 bank gap, and I have not compared my summed assets to the profile's total.
 
 ## Next
 
-SQL for peer groups by asset size, rolling averages, a stress screen, and a check of the March 2023 deposit losses. Then an Excel watchlist built by hand from the query output.
+An Excel watchlist built by hand from `output/05_stress_screen.csv`, with a PivotTable on `output/09_peer_medians.csv` and an XLOOKUP sheet on `output/10_peer_comps.csv`. Then find the 75 bank gap against the FDIC count.
