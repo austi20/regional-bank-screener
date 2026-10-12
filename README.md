@@ -33,8 +33,11 @@ Dollar fields are in thousands. Failed and merged banks are kept, because droppi
 ```
 pip install -r requirements.txt
 python src/load.py
+python src/run_sql.py
 python -m pytest
 ```
+
+`run_sql.py` builds the views in `sql/` and writes each query to `output/*.csv`.
 
 `load.py` takes about 80 seconds, drops and rebuilds `data/banks.db`, and is safe to rerun. The database is not committed. The two tests check that (CERT, REPDTE) is unique and that all 30 quarters loaded.
 
